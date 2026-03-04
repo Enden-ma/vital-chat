@@ -128,10 +128,11 @@ export default function Home() {
             className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 placeholder-transparent disabled:opacity-50 ${isHebrew(input) ? 'text-right' : 'text-left'}`}
           />
           <button type="submit" disabled={isLoading} className={`absolute ${isHebrew(input) ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
-            {/* Minimalist Sprout / Leaf Icon */}
+            {/* Tight but natural feather icon */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 20A7 7 0 0 1 4 13V4h9a7 7 0 0 1 7 7v9h-9Z" />
-              <path d="M11 20V13" />
+              <path d="M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z" />
+              <path d="M16 8 2 22" />
+              <path d="M17.5 15H9" />
             </svg>
           </button>
         </form>
