@@ -9,7 +9,7 @@ const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
 export default function Home() {
   const [greeting, setGreeting] = useState('');
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{role: string, content: string}[]>([]);
+  const [messages, setMessages] = useState<{ role: string, content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function Home() {
 
     const userText = input;
     const newChatHistory = [...messages, { role: 'user', content: userText }];
-    
+
     setMessages(newChatHistory);
     setInput('');
     setIsLoading(true);
@@ -67,27 +67,29 @@ export default function Home() {
           <div className="flex flex-col gap-6 w-full">
             {messages.map((msg, idx) => {
               const isRtl = isHebrew(msg.content);
-              
+
               return (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} fade-in-slow w-full`}>
-                  <div 
+                  <div
                     dir={isRtl ? "rtl" : "ltr"}
-                    className={`max-w-[85%] p-4 rounded-2xl text-[15px] font-light tracking-[0.5px] leading-relaxed shadow-sm ${
-                      isRtl ? 'text-right' : 'text-left'
-                    } ${
-                      msg.role === 'user' 
-                        ? 'bg-[#D1E6F7] text-[#1A252F] rounded-br-none' 
+                    className={`max-w-[85%] p-4 rounded-2xl text-[15px] font-light tracking-[0.5px] leading-relaxed shadow-sm ${isRtl ? 'text-right' : 'text-left'
+                      } ${msg.role === 'user'
+                        ? 'bg-[#D1E6F7] text-[#1A252F] rounded-br-none'
                         : 'bg-white/80 backdrop-blur-sm text-[#2C3E50] rounded-bl-none'
-                    }`}
+                      }`}
                   >
                     {msg.role === 'ai' ? (
                       <div className="space-y-4">
-                        <ReactMarkdown 
+                        <ReactMarkdown
                           components={{
-                            strong: ({node, ...props}) => <span className="font-medium text-[#1A252F]" {...props} />,
-                            ul: ({node, ...props}) => <ul className={`list-disc ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
-                            ol: ({node, ...props}) => <ol className={`list-decimal ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
-                            li: ({node, ...props}) => <li className={isRtl ? 'pr-1' : 'pl-1'} {...props} />
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            strong: ({ node: _node, ...props }) => <span className="font-medium text-[#1A252F]" {...props} />,
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            ul: ({ node: _node, ...props }) => <ul className={`list-disc ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            ol: ({ node: _node, ...props }) => <ol className={`list-decimal ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            li: ({ node: _node, ...props }) => <li className={isRtl ? 'pr-1' : 'pl-1'} {...props} />
                           }}
                         >
                           {msg.content}
@@ -100,7 +102,7 @@ export default function Home() {
                 </div>
               );
             })}
-            
+
             {isLoading && (
               <div className="flex justify-start fade-in-slow w-full">
                 <div className="max-w-[80%] p-4 rounded-2xl bg-white/50 backdrop-blur-sm rounded-bl-none flex items-center justify-center">
@@ -116,8 +118,8 @@ export default function Home() {
 
       <div className="w-full max-w-3xl relative mb-10">
         <form onSubmit={handleSend}>
-          <input 
-            type="text" 
+          <input
+            type="text"
             autoFocus
             value={input}
             onChange={(e) => setInput(e.target.value)}

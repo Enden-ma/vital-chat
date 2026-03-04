@@ -4,7 +4,13 @@ import { GoogleGenAI } from '@google/genai';
 export async function POST(request: Request) {
   try {
     // We now receive the full history array instead of just a message
-    const { history } = await request.json();
+    const body = await request.json();
+    const history = body.history;
+    
+    if (!history || !Array.isArray(history)) {
+      return NextResponse.json({ error: 'Invalid history format' }, { status: 400 });
+    }
+
     console.log("\n--- NEW REQUEST ---");
     console.log(`Vital Brain received a history of ${history.length} messages.`);
 
@@ -17,7 +23,7 @@ export async function POST(request: Request) {
     const ai = new GoogleGenAI({ apiKey: rawKey });
 
     // Format the history for Google's specific requirements
-    const formattedHistory = history.map((msg: any) => ({
+    const formattedHistory = history.map((msg: { role: string; content: string }) => ({
       role: msg.role === 'ai' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     }));
@@ -40,7 +46,7 @@ CRITICAL RULES:
 4. DUAL-SCIENCE DEPTH: Provide short, on-point explanations accessible to a normal person. Use chemistry to explain the *what*, but use new science/ancient wisdom to explain the *why*.
 5. TRUTH OVER AGREEABLENESS: If the user is inaccurate about a process, correct them factually and sharply. 
 6. PARADIGM: Acknowledge that while science is vital, it is currently limited; there are valid biological and energetic phenomena that cannot yet be measured.
-7. FORMATTING: Do NOT use markdown. Do not use asterisks (**) for bolding. Output clean text formatted with standard spacing.`,
+7. FORMATTING: Use markdown to format your text (bolding, lists, etc) when appropriate.`,
       }
     });
 
