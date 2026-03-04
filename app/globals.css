@@ -1,26 +1,41 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Define the new background with the shifting colors */
+body {
+  /* This creates the massive gradient that we will shift. 
+     A soft red (#F9E4E1), then soft green (#E1FAF1), then our light blue (#EBF4FA). */
+  background: linear-gradient(-45deg, #EBF4FA, #E1FAF1, #F9E4E1, #EBF4FA);
+  
+  /* Make the background 4x larger than the screen so we can move it */
+  background-size: 400% 400%;
+  
+  /* Apply the infinite, very slow animation */
+  animation: backgroundWavelength 60s ease infinite;
+  
+  color: #2C3E50;
+  min-height: 100vh;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Keyframes to smoothly move the 4x background */
+@keyframes backgroundWavelength {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Keep our text fade-in from the previous step */
+.fade-in-slow {
+  opacity: 0;
+  animation: fadeIn 1.33s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
