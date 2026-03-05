@@ -89,8 +89,8 @@ export default function Home() {
           onClick={() => setIsSidebarOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-[#A7C7E7] text-[#5D7A94] hover:bg-white hover:text-[#2C3E50] hover:border-[#5D7A94] transition-all duration-300 shadow-sm cursor-pointer"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.length > 0 ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.length > 0 ? "#FFD700" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={savedMessages.length > 0 ? "text-[#FFD700]" : ""}>
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
           <span className="text-sm font-medium">Saved ({savedMessages.length})</span>
         </button>
@@ -192,14 +192,14 @@ export default function Home() {
                         </div>
 
                         {/* Star Button */}
-                        <div className={`absolute bottom-0 ${isRtl ? 'left-0' : 'right-0'} opacity-0 group-hover/msg:opacity-100 transition-opacity duration-300`}>
+                        <div className={`absolute bottom-0 ${isRtl ? 'left-0' : 'right-0'} bg-white/50 backdrop-blur-sm rounded-full md:bg-transparent md:opacity-0 group-hover/msg:opacity-100 transition-opacity duration-300`}>
                           <button
                             onClick={() => toggleSaveMessage(msg.content)}
-                            className="text-[#7AA1C4] hover:text-[#5D7A94] p-1 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer"
+                            className={`p-1 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer ${savedMessages.includes(msg.content) ? 'text-[#FFD700]' : 'text-[#7AA1C4] hover:text-[#5D7A94]'}`}
                             title={savedMessages.includes(msg.content) ? "Unsave message" : "Save message"}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.includes(msg.content) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                             </svg>
                           </button>
                         </div>
