@@ -45,9 +45,9 @@ export async function POST(request: Request) {
         if (sourceKnowledge) {
           console.log(`Successfully loaded source knowledge from ${files.length} file(s).`);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // If the directory doesn't exist, we just proceed without source knowledge
-        if (err.code !== 'ENOENT') {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
           console.warn("Warning: Could not read knowledge directory.", err);
         }
       }
