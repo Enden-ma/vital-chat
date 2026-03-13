@@ -234,7 +234,7 @@ export default function Home() {
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
             dir={isHebrew(input) ? "rtl" : "ltr"}
-            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 placeholder-transparent disabled:opacity-50 ${isHebrew(input) ? 'text-right' : 'text-left'}`}
+            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 placeholder-transparent disabled:opacity-50 ${isHebrew(input) ? 'text-right pl-10' : 'text-left pr-10'}`}
           />
           <button type="submit" disabled={isLoading} className={`absolute ${isHebrew(input) ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
             {/* Tight but natural feather icon */}
