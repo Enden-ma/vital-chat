@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // The detector: checks if a string contains any Hebrew characters
@@ -15,6 +15,9 @@ export default function Home() {
   // Saved messages state
   const [savedMessages, setSavedMessages] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Ref for the auto-resizing textarea
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -77,6 +80,30 @@ export default function Home() {
       setMessages(prev => [...prev, { role: 'ai', content: "[System: Front-end connection failed.]" }]);
     } finally {
       setIsLoading(false);
+      // Reset textarea height after sending
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+
+    // Auto-resize logic
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      // Only submit if taking a valid action, simulating form submission
+      if (input.trim() && !isLoading) {
+        handleSend(e as unknown as React.FormEvent);
+      }
     }
   };
 
@@ -226,15 +253,19 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-3xl relative mb-10">
-        <form onSubmit={handleSend}>
-          <input
-            type="text"
+        <form onSubmit={handleSend} className="relative flex items-end">
+          <textarea
+            ref={textareaRef}
             autoFocus
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
             disabled={isLoading}
             dir={isHebrew(input) ? "rtl" : "ltr"}
-            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 placeholder-transparent disabled:opacity-50 ${isHebrew(input) ? 'text-right pl-10' : 'text-left pr-10'}`}
+            rows={1}
+            placeholder=" "
+            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 disabled:opacity-50 resize-none overflow-y-auto block ${isHebrew(input) ? 'text-right pl-10' : 'text-left pr-10'}`}
+            style={{ minHeight: '48px', maxHeight: '160px' }}
           />
           <button type="submit" disabled={isLoading} className={`absolute ${isHebrew(input) ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
             {/* Tight but natural feather icon */}
