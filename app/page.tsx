@@ -153,12 +153,11 @@ export default function Home() {
         }, 700);
       } else {
         setPasscodeError('Invalid Code.');
+        setIsLoading(false);
       }
     } catch {
       setPasscodeError('Connection error.');
-    } finally {
-      // Don't disable spinner if entering
-      if (!isEntering) setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -209,9 +208,10 @@ export default function Home() {
             >
               {isLoading ? (
                 <div className="relative flex items-center justify-center w-6 h-6">
-                  <div className="absolute w-2 h-2 bg-white rounded-full opacity-90 animate-pulse"></div>
-                  <div className="absolute w-2 h-2 border-[1.5px] border-white rounded-full animate-ping opacity-80" style={{ animationDuration: '1.5s' }}></div>
-                  <div className="absolute w-2 h-2 border border-white rounded-full animate-ping opacity-50" style={{ animationDelay: '0.5s', animationDuration: '1.5s' }}></div>
+                  <div className="absolute w-2 h-2 bg-white rounded-full opacity-90 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="absolute w-2.5 h-2.5 border-[1.5px] border-white rounded-full animate-ping opacity-100" style={{ animationDuration: '2s' }}></div>
+                  <div className="absolute w-2.5 h-2.5 border-[1.5px] border-white rounded-full animate-ping opacity-80" style={{ animationDelay: '0.6s', animationDuration: '2s' }}></div>
+                  <div className="absolute w-2.5 h-2.5 border border-white/50 rounded-full animate-ping opacity-50" style={{ animationDelay: '1.2s', animationDuration: '2s' }}></div>
                 </div>
               ) : (
                 <svg className="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
