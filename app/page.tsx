@@ -101,13 +101,15 @@ export default function Home() {
     }
   };
 
+  const isRtlInput = !input.trim() || isHebrew(input);
+
   return (
     <main 
       className="min-h-screen text-[#2C3E50] flex flex-col items-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
       style={{ backgroundImage: "url('/bg.jpg')" }}
     >
-      {/* Optional: an overlay to make text readable over the background. Can adjust opacity if needed. */}
-      <div className="absolute inset-0 bg-[#F5F9FD]/60 backdrop-blur-[2px] pointer-events-none z-0" />
+      {/* Overlay to ensure text readability while keeping the image completely sharp */}
+      <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
 
 
       {/* Saved Messages Sidebar Header/Trigger */}
@@ -116,7 +118,7 @@ export default function Home() {
           onClick={() => setIsSidebarOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 backdrop-blur-sm border border-[#A7C7E7] text-[#5D7A94] hover:bg-white hover:text-[#2C3E50] hover:border-[#5D7A94] transition-all duration-300 shadow-sm cursor-pointer"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.length > 0 ? "#FFD700" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={savedMessages.length > 0 ? "text-[#FFD700]" : ""}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.length > 0 ? "currentColor" : "none"} fillOpacity={savedMessages.length > 0 ? 0.3 : 1} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={savedMessages.length > 0 ? "text-[#5D7A94]" : ""}>
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
           <span className="text-sm font-medium">Saved ({savedMessages.length})</span>
@@ -179,8 +181,8 @@ export default function Home() {
 
       <div className="w-full max-w-3xl flex-grow flex flex-col justify-end pb-8 pt-16 overflow-y-auto relative z-10">
         {messages.length === 0 ? (
-          <div className="fade-in-slow text-right mb-12 w-full" dir="rtl">
-            <h1 className="text-xl font-medium tracking-[0.5px] text-[#2C3E50] drop-shadow-sm">
+          <div className="fade-in-slow text-center mb-12 w-full" dir="rtl">
+            <h1 className="text-xl font-medium tracking-[1px] text-[#5D7A94] drop-shadow-sm bg-white/40 inline-block px-6 py-3 rounded-2xl border border-white/50">
               היי, איך אפשר לעזור?
             </h1>
           </div>
@@ -222,10 +224,10 @@ export default function Home() {
                         <div className={`absolute bottom-0 ${isRtl ? 'left-0' : 'right-0'} bg-white/50 backdrop-blur-sm rounded-full md:bg-transparent md:opacity-0 group-hover/msg:opacity-100 transition-opacity duration-300`}>
                           <button
                             onClick={() => toggleSaveMessage(msg.content)}
-                            className={`p-1 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer ${savedMessages.includes(msg.content) ? 'text-[#FFD700]' : 'text-[#7AA1C4] hover:text-[#5D7A94]'}`}
+                            className={`p-1 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer ${savedMessages.includes(msg.content) ? 'text-[#5D7A94]' : 'text-[#7AA1C4] hover:text-[#5D7A94]'}`}
                             title={savedMessages.includes(msg.content) ? "Unsave message" : "Save message"}
                           >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.includes(msg.content) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.includes(msg.content) ? "currentColor" : "none"} fillOpacity={savedMessages.includes(msg.content) ? 0.3 : 1} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                             </svg>
                           </button>
@@ -261,13 +263,13 @@ export default function Home() {
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
-            dir={isHebrew(input) ? "rtl" : "ltr"}
+            dir={isRtlInput ? "rtl" : "ltr"}
             rows={1}
             placeholder=" "
-            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 disabled:opacity-50 resize-none overflow-y-auto block ${isHebrew(input) ? 'text-right pl-10' : 'text-left pr-10'}`}
+            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 disabled:opacity-50 resize-none overflow-y-auto block ${isRtlInput ? 'text-right pl-10' : 'text-left pr-10'}`}
             style={{ minHeight: '48px', maxHeight: '160px' }}
           />
-          <button type="submit" disabled={isLoading} className={`absolute ${isHebrew(input) ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
+          <button type="submit" disabled={isLoading} className={`absolute ${isRtlInput ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
             {/* Tight but natural feather icon */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z" />
