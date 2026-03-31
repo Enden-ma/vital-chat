@@ -8,6 +8,12 @@ export async function POST(request: Request) {
     // We now receive the full history array instead of just a message
     const body = await request.json();
     const history = body.history;
+    const passcode = body.passcode;
+
+    // Check passcode if one is configured
+    if (process.env.APP_PASSCODE && passcode !== process.env.APP_PASSCODE) {
+      return NextResponse.json({ error: 'Unauthorized: Invalid passcode' }, { status: 401 });
+    }
 
     if (!history || !Array.isArray(history)) {
       return NextResponse.json({ error: 'Invalid history format' }, { status: 400 });

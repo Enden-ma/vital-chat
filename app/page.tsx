@@ -11,6 +11,11 @@ export default function Home() {
   const [messages, setMessages] = useState<{ role: string, content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Passcode verification state
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+
   // Saved messages state
   const [savedMessages, setSavedMessages] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -19,6 +24,28 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    // Check passcode on mount
+    const verifyToken = async () => {
+      const savedCode = localStorage.getItem('vital-passcode');
+      if (savedCode) {
+        try {
+          const res = await fetch('/api/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passcode: savedCode }),
+          });
+          const data = await res.json();
+          setIsVerified(Boolean(data.valid));
+          if (!data.valid) localStorage.removeItem('vital-passcode');
+        } catch {
+          setIsVerified(false);
+        }
+      } else {
+        setIsVerified(false);
+      }
+    };
+    verifyToken();
+
     // Load saved messages on mount
     const stored = localStorage.getItem('vital-saved-messages');
     if (stored) {
@@ -57,7 +84,10 @@ export default function Home() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: newChatHistory }),
+        body: JSON.stringify({ 
+          history: newChatHistory,
+          passcode: localStorage.getItem('vital-passcode')
+        }),
       });
 
       const data = await response.json();
@@ -101,7 +131,90 @@ export default function Home() {
     }
   };
 
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passcodeInput.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: passcodeInput }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        localStorage.setItem('vital-passcode', passcodeInput);
+        setIsVerified(true);
+        setPasscodeError('');
+      } else {
+        setPasscodeError('Invalid Code.');
+      }
+    } catch {
+      setPasscodeError('Connection error.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isRtlInput = !input.trim() || isHebrew(input);
+
+  if (isVerified === null) {
+    // Blank state while we check localStorage on first load
+    return (
+      <main 
+        className="min-h-screen relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed flex items-center justify-center"
+        style={{ backgroundImage: "url('/bg.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
+      </main>
+    );
+  }
+
+  if (isVerified === false) {
+    return (
+      <main 
+        className="min-h-screen text-[#2C3E50] flex flex-col items-center justify-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+        style={{ backgroundImage: "url('/bg.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
+        
+        <div className="relative z-10 w-full max-w-sm sm:max-w-md bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-lg border border-white/50 text-center fade-in-slow">
+          <h1 className="text-2xl font-light tracking-[1px] text-[#5D7A94] drop-shadow-sm mb-2">Welcome</h1>
+          <p className="text-[#7AA1C4] mb-8 font-light tracking-[0.5px]">Please enter your access code.</p>
+          
+          <form onSubmit={handleVerify} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                value={passcodeInput}
+                onChange={(e) => setPasscodeInput(e.target.value)}
+                placeholder="Access Code"
+                className="w-full bg-white/50 border border-[#A7C7E7] focus:border-[#5D7A94] outline-none px-4 py-3 rounded-xl text-center text-[#2C3E50] tracking-[2px] transition-all placeholder:tracking-[1px]"
+                disabled={isLoading}
+                autoFocus
+              />
+              {passcodeError && (
+                <p className="text-red-400 text-sm mt-3 font-medium">{passcodeError}</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || !passcodeInput.trim()}
+              className="w-full bg-[#7AA1C4] hover:bg-[#5D7A94] text-white py-3 rounded-xl font-medium tracking-[1px] transition-all disabled:opacity-50 flex justify-center items-center cursor-pointer"
+            >
+              {isLoading ? (
+                <svg className="w-5 h-5 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+                </svg>
+              ) : (
+                "Enter"
+              )}
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main 
