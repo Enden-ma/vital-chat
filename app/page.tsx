@@ -167,7 +167,7 @@ export default function Home() {
     // Blank state while we check localStorage on first load
     return (
       <main 
-        className="min-h-screen relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed flex items-center justify-center"
+        className="h-[100dvh] w-full relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed flex items-center justify-center"
         style={{ backgroundImage: "url('/bg.jpg')" }}
       >
         <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
@@ -178,7 +178,7 @@ export default function Home() {
   if (isVerified === false) {
     return (
       <main 
-        className="min-h-screen text-[#2C3E50] flex flex-col items-center justify-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+        className="h-[100dvh] w-full text-[#2C3E50] flex flex-col items-center justify-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
         style={{ backgroundImage: "url('/bg.jpg')" }}
       >
         <div className={`absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0 transition-opacity duration-700 ease-in-out ${isEntering ? 'opacity-0' : 'opacity-100'}`} />
@@ -193,9 +193,8 @@ export default function Home() {
                 value={passcodeInput}
                 onChange={(e) => setPasscodeInput(e.target.value)}
                 placeholder="Access Code"
-                className="w-full bg-white/50 border border-[#A7C7E7] focus:border-[#5D7A94] outline-none px-4 py-3 rounded-xl text-center text-[#2C3E50] tracking-[2px] transition-all placeholder:tracking-[1px]"
+                className="w-full bg-white/50 border border-[#A7C7E7] focus:border-[#5D7A94] outline-none px-4 py-3 rounded-xl text-center text-[#2C3E50] text-[16px] tracking-[2px] transition-all placeholder:tracking-[1px]"
                 disabled={isLoading}
-                autoFocus
               />
               {passcodeError && (
                 <p className="text-red-400 text-sm mt-3 font-medium">{passcodeError}</p>
@@ -227,7 +226,7 @@ export default function Home() {
 
   return (
     <main 
-      className="min-h-screen text-[#2C3E50] flex flex-col items-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+      className="h-[100dvh] w-full text-[#2C3E50] flex flex-col items-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
       style={{ backgroundImage: "url('/bg.jpg')" }}
     >
       {/* Overlay to ensure text readability while keeping the image completely sharp */}
@@ -384,7 +383,6 @@ export default function Home() {
         <form onSubmit={handleSend} className="relative flex items-end">
           <textarea
             ref={textareaRef}
-            autoFocus
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
@@ -392,7 +390,7 @@ export default function Home() {
             dir={isRtlInput ? "rtl" : "ltr"}
             rows={1}
             placeholder=" "
-            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[15px] font-light tracking-[1px] transition-colors duration-500 disabled:opacity-50 resize-none overflow-y-auto block ${isRtlInput ? 'text-right pl-10' : 'text-left pr-10'}`}
+            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[16px] font-light tracking-[1px] transition-colors duration-500 disabled:opacity-50 resize-none overflow-y-auto block ${isRtlInput ? 'text-right pl-10' : 'text-left pr-10'}`}
             style={{ minHeight: '48px', maxHeight: '160px' }}
           />
           <button type="submit" disabled={isLoading} className={`absolute ${isRtlInput ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
