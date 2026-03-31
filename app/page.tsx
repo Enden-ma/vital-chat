@@ -179,8 +179,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
         
         <div className="relative z-10 w-full max-w-sm sm:max-w-md bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-lg border border-white/50 text-center fade-in-slow">
-          <h1 className="text-2xl font-medium tracking-[0.5px] text-[#5D7A94] drop-shadow-sm mb-2" dir="rtl">חיכינו לך :)</h1>
-          <p className="text-[#7AA1C4] mb-8 font-light tracking-[0.5px] text-sm" dir="rtl">אנא הזן את קוד הגישה</p>
+          <h1 className="text-2xl font-medium tracking-[0.5px] text-[#5D7A94] drop-shadow-sm mb-6" dir="rtl">חיכינו לך :)</h1>
           
           <form onSubmit={handleVerify} className="space-y-4">
             <div>
