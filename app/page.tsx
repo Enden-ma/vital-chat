@@ -13,6 +13,7 @@ export default function Home() {
 
   // Passcode verification state
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [isEntering, setIsEntering] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
 
@@ -144,15 +145,20 @@ export default function Home() {
       const data = await res.json();
       if (data.valid) {
         localStorage.setItem('vital-passcode', passcodeInput);
-        setIsVerified(true);
         setPasscodeError('');
+        setIsEntering(true);
+        setTimeout(() => {
+          setIsVerified(true);
+          setIsEntering(false);
+        }, 700);
       } else {
         setPasscodeError('Invalid Code.');
       }
     } catch {
       setPasscodeError('Connection error.');
     } finally {
-      setIsLoading(false);
+      // Don't disable spinner if entering
+      if (!isEntering) setIsLoading(false);
     }
   };
 
@@ -176,9 +182,9 @@ export default function Home() {
         className="min-h-screen text-[#2C3E50] flex flex-col items-center justify-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
         style={{ backgroundImage: "url('/bg.jpg')" }}
       >
-        <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
+        <div className={`absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0 transition-opacity duration-700 ease-in-out ${isEntering ? 'opacity-0' : 'opacity-100'}`} />
         
-        <div className="relative z-10 w-full max-w-sm sm:max-w-md bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-lg border border-white/50 text-center fade-in-slow">
+        <div className={`relative z-10 w-full max-w-sm sm:max-w-md bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-lg border border-white/50 text-center transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] ${isEntering ? 'opacity-0 blur-md scale-110 -translate-y-4' : 'opacity-100 blur-0 scale-100 translate-y-0'} fade-in-slow`}>
           <h1 className="text-2xl font-medium tracking-[0.5px] text-[#5D7A94] drop-shadow-sm mb-6" dir="rtl">חיכינו לך :)</h1>
           
           <form onSubmit={handleVerify} className="space-y-4">
@@ -206,7 +212,9 @@ export default function Home() {
                   <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
                 </svg>
               ) : (
-                "Enter"
+                <svg className="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
               )}
             </button>
           </form>
