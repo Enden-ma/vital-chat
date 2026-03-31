@@ -208,9 +208,11 @@ export default function Home() {
               className="w-full bg-[#7AA1C4] hover:bg-[#5D7A94] text-white py-3 rounded-xl font-medium tracking-[1px] transition-all disabled:opacity-50 flex justify-center items-center cursor-pointer"
             >
               {isLoading ? (
-                <svg className="w-5 h-5 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
-                </svg>
+                <div className="relative flex items-center justify-center w-6 h-6">
+                  <div className="absolute w-2 h-2 bg-white rounded-full opacity-90 animate-pulse"></div>
+                  <div className="absolute w-2 h-2 border-[1.5px] border-white rounded-full animate-ping opacity-80" style={{ animationDuration: '1.5s' }}></div>
+                  <div className="absolute w-2 h-2 border border-white rounded-full animate-ping opacity-50" style={{ animationDelay: '0.5s', animationDuration: '1.5s' }}></div>
+                </div>
               ) : (
                 <svg className="w-6 h-6 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"></polyline>
@@ -363,10 +365,14 @@ export default function Home() {
 
             {isLoading && (
               <div className="flex justify-start fade-in-slow w-full">
-                <div className="max-w-[80%] p-4 rounded-2xl bg-white/50 backdrop-blur-sm rounded-bl-none flex items-center justify-center">
-                  <svg className="w-5 h-5 animate-spin text-[#7AA1C4]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
-                  </svg>
+                <div className="max-w-[80%] p-5 rounded-2xl bg-white/50 backdrop-blur-sm rounded-bl-none flex items-center justify-center min-w-[70px] min-h-[46px]">
+                  {/* Organic Water Ripples Animation */}
+                  <div className="relative flex items-center justify-center w-8 h-8">
+                    <div className="absolute w-2.5 h-2.5 bg-[#5D7A94] rounded-full animate-pulse opacity-80" style={{ animationDuration: '2s' }}></div>
+                    <div className="absolute w-3 h-3 border-[1.5px] border-[#7AA1C4] rounded-full animate-ping" style={{ animationDuration: '2s' }}></div>
+                    <div className="absolute w-3 h-3 border-[1.5px] border-[#A7C7E7] rounded-full animate-ping opacity-75" style={{ animationDelay: '0.6s', animationDuration: '2s' }}></div>
+                    <div className="absolute w-3 h-3 border border-white rounded-full animate-ping opacity-50" style={{ animationDelay: '1.2s', animationDuration: '2s' }}></div>
+                  </div>
                 </div>
               </div>
             )}
