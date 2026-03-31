@@ -7,7 +7,6 @@ import ReactMarkdown from 'react-markdown';
 const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
 
 export default function Home() {
-  const [greeting, setGreeting] = useState('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: string, content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,11 +19,6 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good morning.');
-    else if (hour < 18) setGreeting('Good afternoon.');
-    else setGreeting('Good evening.');
-
     // Load saved messages on mount
     const stored = localStorage.getItem('vital-saved-messages');
     if (stored) {
@@ -108,7 +102,13 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen text-[#2C3E50] flex flex-col items-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden">
+    <main 
+      className="min-h-screen text-[#2C3E50] flex flex-col items-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{ backgroundImage: "url('/bg.jpg')" }}
+    >
+      {/* Optional: an overlay to make text readable over the background. Can adjust opacity if needed. */}
+      <div className="absolute inset-0 bg-[#F5F9FD]/60 backdrop-blur-[2px] pointer-events-none z-0" />
+
 
       {/* Saved Messages Sidebar Header/Trigger */}
       <div className="absolute top-6 right-6 sm:top-8 sm:right-8 z-20">
@@ -177,11 +177,11 @@ export default function Home() {
         </div>
       )}
 
-      <div className="w-full max-w-3xl flex-grow flex flex-col justify-end pb-8 pt-16 overflow-y-auto">
+      <div className="w-full max-w-3xl flex-grow flex flex-col justify-end pb-8 pt-16 overflow-y-auto relative z-10">
         {messages.length === 0 ? (
-          <div className="fade-in-slow text-center mb-12">
-            <h1 className="text-xl font-light tracking-[1px] text-[#5D7A94]">
-              {greeting} How can I help?
+          <div className="fade-in-slow text-right mb-12 w-full" dir="rtl">
+            <h1 className="text-xl font-medium tracking-[0.5px] text-[#2C3E50] drop-shadow-sm">
+              היי, איך אפשר לעזור?
             </h1>
           </div>
         ) : (
@@ -252,7 +252,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="w-full max-w-3xl relative mb-10">
+      <div className="w-full max-w-3xl relative mb-10 z-10">
         <form onSubmit={handleSend} className="relative flex items-end">
           <textarea
             ref={textareaRef}
