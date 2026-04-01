@@ -138,6 +138,15 @@ export default function Home() {
     }
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      // Optional: You could add a tiny ephemeral "Copied!" toast state here if desired in the future
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passcodeInput.trim()) return;
@@ -330,31 +339,44 @@ export default function Home() {
                   >
                     {msg.role === 'ai' ? (
                       <div className="relative group/msg">
-                        <div className="space-y-4 pb-5">
+                        <div className="space-y-3 pb-6 user-select-text">
                           <ReactMarkdown
                             components={{
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              strong: ({ node: _node, ...props }: any) => <span className="font-medium text-[#1A252F]" {...props} />,
+                              strong: ({ node: _node, ...props }: any) => <span className="font-semibold text-[#1A252F]" {...props} />,
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              ul: ({ node: _node, ...props }: any) => <ul className={`list-disc ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
+                              ul: ({ node: _node, ...props }: any) => <ul className={`list-disc ${isRtl ? 'pr-5' : 'pl-5'} space-y-1 my-2`} {...props} />,
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              ol: ({ node: _node, ...props }: any) => <ol className={`list-decimal ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
+                              ol: ({ node: _node, ...props }: any) => <ol className={`list-decimal ${isRtl ? 'pr-5' : 'pl-5'} space-y-1 my-2`} {...props} />,
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              li: ({ node: _node, ...props }: any) => <li className={isRtl ? 'pr-1' : 'pl-1'} {...props} />
+                              li: ({ node: _node, ...props }: any) => <li className={`${isRtl ? 'pr-1' : 'pl-1'} mb-1`} {...props} />,
+                              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                              p: ({ node: _node, ...props }: any) => <p className="mb-3 last:mb-0 leading-relaxed" {...props} />
                             }}
                           >
                             {msg.content}
                           </ReactMarkdown>
                         </div>
 
-                        {/* Star Button */}
-                        <div className={`absolute bottom-0 ${isRtl ? 'left-0' : 'right-0'} bg-white/50 backdrop-blur-sm rounded-full md:bg-transparent md:opacity-0 group-hover/msg:opacity-100 transition-opacity duration-300`}>
+                        {/* Action Buttons (Copy & Star) */}
+                        <div className={`absolute bottom-0 ${isRtl ? 'left-0' : 'right-0'} flex gap-1 bg-white/50 backdrop-blur-sm rounded-full md:bg-transparent md:opacity-0 group-hover/msg:opacity-100 transition-opacity duration-300 px-1 py-0.5`}>
+                          <button
+                            onClick={() => copyToClipboard(msg.content)}
+                            className="p-1.5 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer text-[#7AA1C4] hover:text-[#5D7A94]"
+                            title="Copy message"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                          </button>
+                          
                           <button
                             onClick={() => toggleSaveMessage(msg.content)}
-                            className={`p-1 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer ${savedMessages.includes(msg.content) ? 'text-[#5D7A94]' : 'text-[#7AA1C4] hover:text-[#5D7A94]'}`}
+                            className={`p-1.5 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer ${savedMessages.includes(msg.content) ? 'text-[#5D7A94]' : 'text-[#7AA1C4] hover:text-[#5D7A94]'}`}
                             title={savedMessages.includes(msg.content) ? "Unsave message" : "Save message"}
                           >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill={savedMessages.includes(msg.content) ? "currentColor" : "none"} fillOpacity={savedMessages.includes(msg.content) ? 0.3 : 1} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill={savedMessages.includes(msg.content) ? "currentColor" : "none"} fillOpacity={savedMessages.includes(msg.content) ? 0.3 : 1} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                             </svg>
                           </button>
