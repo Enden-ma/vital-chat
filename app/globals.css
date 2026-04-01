@@ -39,3 +39,14 @@ body {
   0% { opacity: 0; }
   100% { opacity: 1; }
 }
+
+
+
+/* Completely hide scrollbars for absolute cleanliness but retain scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

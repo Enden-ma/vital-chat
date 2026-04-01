@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 // The detector: checks if a string contains any Hebrew characters
 const isHebrew = (text: string) => /[\u0590-\u05FF]/.test(text);
 
+// Typewriter component for new AI messages
+
+
 export default function Home() {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{ role: string, content: string }[]>([]);
+  const [messages, setMessages] = useState<{ role: string, content: string, isNew?: boolean }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scrolling is entirely disabled. Nothing moves unless the user scrolls manually.
 
   // Passcode verification state
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
@@ -94,11 +100,11 @@ export default function Home() {
       const data = await response.json();
 
       if (data.text) {
-        setMessages(prev => [...prev, { role: 'ai', content: data.text }]);
+        setMessages(prev => [...prev, { role: 'ai', content: data.text, isNew: true }]);
       } else if (data.error) {
-        setMessages(prev => [...prev, { role: 'ai', content: `[System Error: ${data.error}]` }]);
+        setMessages(prev => [...prev, { role: 'ai', content: `[System Error: ${data.error}]`, isNew: true }]);
       } else {
-        setMessages(prev => [...prev, { role: 'ai', content: "[System: Received an empty response from the brain.]" }]);
+        setMessages(prev => [...prev, { role: 'ai', content: "[System: Received an empty response from the brain.]", isNew: true }]);
       }
     } catch (error) {
       console.error("Connection error:", error);
@@ -300,7 +306,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="w-full max-w-3xl flex-grow flex flex-col justify-end pb-8 pt-16 overflow-y-auto relative z-10">
+      <div className="w-full max-w-3xl flex-grow flex flex-col pb-8 pt-16 overflow-y-auto relative z-10 scroll-smooth no-scrollbar" style={{ overflowAnchor: 'none' }}>
         {messages.length === 0 ? (
           <div className="fade-in-slow text-center mb-12 w-full" dir="rtl">
             <h1 className="text-xl font-medium tracking-[1px] text-[#5D7A94] drop-shadow-sm bg-white/40 inline-block px-6 py-3 rounded-2xl border border-white/50">
@@ -316,10 +322,10 @@ export default function Home() {
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} fade-in-slow w-full`}>
                   <div
                     dir={isRtl ? "rtl" : "ltr"}
-                    className={`max-w-[85%] p-4 rounded-2xl text-[15px] font-light tracking-[0.5px] leading-relaxed shadow-sm ${isRtl ? 'text-right' : 'text-left'
+                    className={`max-w-[85%] p-4 rounded-3xl text-[15px] font-light tracking-[0.5px] leading-relaxed shadow-sm backdrop-blur-md border border-white/40 ${isRtl ? 'text-right' : 'text-left'
                       } ${msg.role === 'user'
-                        ? 'bg-[#D1E6F7] text-[#1A252F] rounded-br-none'
-                        : 'bg-white/80 backdrop-blur-sm text-[#2C3E50] rounded-bl-none'
+                        ? 'bg-[#D1E6F7]/30 text-[#1A252F] rounded-br-[8px]'
+                        : 'bg-white/30 text-[#2C3E50] rounded-bl-[8px]'
                       }`}
                   >
                     {msg.role === 'ai' ? (
@@ -328,13 +334,13 @@ export default function Home() {
                           <ReactMarkdown
                             components={{
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              strong: ({ node: _node, ...props }) => <span className="font-medium text-[#1A252F]" {...props} />,
+                              strong: ({ node: _node, ...props }: any) => <span className="font-medium text-[#1A252F]" {...props} />,
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              ul: ({ node: _node, ...props }) => <ul className={`list-disc ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
+                              ul: ({ node: _node, ...props }: any) => <ul className={`list-disc ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              ol: ({ node: _node, ...props }) => <ol className={`list-decimal ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
+                              ol: ({ node: _node, ...props }: any) => <ol className={`list-decimal ${isRtl ? 'pr-5' : 'pl-5'} space-y-2`} {...props} />,
                               // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                              li: ({ node: _node, ...props }) => <li className={isRtl ? 'pr-1' : 'pl-1'} {...props} />
+                              li: ({ node: _node, ...props }: any) => <li className={isRtl ? 'pr-1' : 'pl-1'} {...props} />
                             }}
                           >
                             {msg.content}
@@ -364,7 +370,7 @@ export default function Home() {
 
             {isLoading && (
               <div className="flex justify-start fade-in-slow w-full">
-                <div className="max-w-[80%] p-5 rounded-2xl bg-white/50 backdrop-blur-sm rounded-bl-none flex items-center justify-center min-w-[70px] min-h-[46px]">
+                <div className="max-w-[80%] px-4 py-3 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/40 rounded-bl-[8px] flex items-center justify-center min-w-[60px] min-h-[40px]">
                   {/* Organic Water Ripples Animation */}
                   <div className="relative flex items-center justify-center w-8 h-8">
                     <div className="absolute w-2.5 h-2.5 bg-[#5D7A94] rounded-full animate-pulse opacity-80" style={{ animationDuration: '2s' }}></div>
@@ -375,12 +381,13 @@ export default function Home() {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} className="h-4 w-full flex-shrink-0" />
           </div>
         )}
       </div>
 
-      <div className="w-full max-w-3xl relative mb-10 z-10">
-        <form onSubmit={handleSend} className="relative flex items-end">
+      <div className="w-full max-w-3xl relative mb-10 z-50">
+        <form onSubmit={handleSend} className={`relative flex items-end bg-white/20 backdrop-blur-sm border border-white/40 rounded-[24px] shadow-sm focus-within:bg-white/30 focus-within:shadow-[0_4px_20px_rgba(255,255,255,0.05)] transition-all duration-500 p-1.5 ${isRtlInput ? 'flex-row-reverse' : 'flex-row'}`}>
           <textarea
             ref={textareaRef}
             value={input}
@@ -389,11 +396,11 @@ export default function Home() {
             disabled={isLoading}
             dir={isRtlInput ? "rtl" : "ltr"}
             rows={1}
-            placeholder=" "
-            className={`w-full bg-transparent border-b border-[#A7C7E7] focus:border-[#5D7A94] outline-none py-3 text-[16px] font-light tracking-[1px] transition-colors duration-500 disabled:opacity-50 resize-none overflow-y-auto block ${isRtlInput ? 'text-right pl-10' : 'text-left pr-10'}`}
-            style={{ minHeight: '48px', maxHeight: '160px' }}
+            placeholder=""
+            className={`flex-grow bg-transparent outline-none py-2 px-3 text-[15px] font-medium tracking-[0.5px] text-[#2C3E50] placeholder:text-[#5D7A94]/70 transition-colors duration-300 disabled:opacity-50 resize-none overflow-y-auto block no-scrollbar ${isRtlInput ? 'text-right' : 'text-left'}`}
+            style={{ minHeight: '38px', maxHeight: '160px' }}
           />
-          <button type="submit" disabled={isLoading} className={`absolute ${isRtlInput ? 'left-2' : 'right-2'} bottom-3 text-[#7AA1C4] hover:text-[#5D7A94] transition-colors duration-300 cursor-pointer disabled:opacity-50`}>
+          <button type="submit" disabled={isLoading || !input.trim()} className="flex-shrink-0 mb-[2px] mx-1 text-[#7AA1C4] hover:text-[#5D7A94] focus:outline-none transition-all duration-300 cursor-pointer disabled:opacity-40 p-2 rounded-full hover:bg-white/40 active:scale-95 flex items-center justify-center">
             {/* Tight but natural feather icon */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z" />
