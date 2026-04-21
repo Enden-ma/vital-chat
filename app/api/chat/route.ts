@@ -3,6 +3,37 @@ import { GoogleGenAI } from '@google/genai';
 import fs from 'fs/promises';
 import path from 'path';
 
+// Global cache for knowledge files
+let knowledgeCache: Record<string, string> | null = null;
+let knowledgeTopicList: string = "";
+
+async function loadKnowledgeCache() {
+  if (knowledgeCache) return;
+  
+  knowledgeCache = {};
+  const knowledgeDir = path.join(process.cwd(), 'knowledge');
+  
+  try {
+    await fs.access(knowledgeDir);
+    const files = await fs.readdir(knowledgeDir);
+
+    for (const file of files) {
+      if (file.endsWith('.txt') || file.endsWith('.md')) {
+        const filePath = path.join(knowledgeDir, file);
+        const content = await fs.readFile(filePath, 'utf-8');
+        knowledgeCache[file] = content;
+      }
+    }
+    
+    knowledgeTopicList = Object.keys(knowledgeCache).join(", ");
+    console.log(`Successfully loaded ${Object.keys(knowledgeCache).length} files into memory cache.`);
+  } catch (err: any) {
+    if (err.code !== 'ENOENT') {
+      console.warn("Warning: Could not read knowledge directory.", err);
+    }
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // We now receive the full history array instead of just a message
@@ -30,35 +61,93 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey: rawKey });
 
-    // Read Source Knowledge from /knowledge directory
-    let sourceKnowledge = "";
-    try {
-      const knowledgeDir = path.join(process.cwd(), 'knowledge');
+    // Load knowledge cache into RAM if not already loaded
+    await loadKnowledgeCache();
 
-      // Check if directory exists
-      try {
-        await fs.access(knowledgeDir);
-        const files = await fs.readdir(knowledgeDir);
+    // Get the latest user message for routing
+    const latestUserMessage = history.slice().reverse().find((msg: any) => msg.role === 'user')?.content || "";
 
-        for (const file of files) {
-          if (file.endsWith('.txt') || file.endsWith('.md')) {
-            const filePath = path.join(knowledgeDir, file);
-            const content = await fs.readFile(filePath, 'utf-8');
-            sourceKnowledge += `\n\n--- SOURCE FILE: ${file} ---\n${content}`;
+    // Pass 1: Semantic Router
+    let selectedFiles: string[] = [];
+    let isAllKnowledge = false;
+
+    // Cascade fallback: try primary model first, fall back to secondary on 503/429
+    const MODEL_CASCADE = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+
+    const callGeminiWithCascade = async (config: any): Promise<any> => {
+      let lastError: any;
+      for (const model of MODEL_CASCADE) {
+        try {
+          console.log(`Trying model: ${model}`);
+          const result = await ai.models.generateContent({ ...config, model });
+          console.log(`Success with model: ${model}`);
+          return result;
+        } catch (err: any) {
+          const errString = err.message || JSON.stringify(err);
+          const isOverloaded = err.status === 503 || err.status === 429 ||
+                               errString.includes('503') || errString.includes('429') ||
+                               errString.includes('UNAVAILABLE');
+          lastError = err;
+          if (isOverloaded) {
+            console.warn(`Model ${model} overloaded (503/429), cascading to next model...`);
+            continue; // Try the next model immediately
+          } else {
+            throw err; // Non-retryable error, bail immediately
           }
         }
-
-        if (sourceKnowledge) {
-          console.log(`Successfully loaded source knowledge from ${files.length} file(s).`);
-        }
-      } catch (err: unknown) {
-        // If the directory doesn't exist, we just proceed without source knowledge
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-          console.warn("Warning: Could not read knowledge directory.", err);
-        }
       }
-    } catch (error) {
-      console.warn("Failed to process knowledge base.", error);
+      throw lastError; // All models failed
+    };
+
+    if (knowledgeCache && Object.keys(knowledgeCache).length > 0 && latestUserMessage) {
+      try {
+        console.log("Running Pass 1: Semantic Router...");
+        const routerPrompt = `You are a router. Your job is to select the most relevant knowledge files to answer the user's latest query.
+Available files: ${knowledgeTopicList}
+
+User Query: "${latestUserMessage}"
+
+If the user is asking for a comprehensive or deep plan spanning multiple systems (e.g. a complete health protocol), reply EXACTLY with the word "ALL_KNOWLEDGE".
+Otherwise, reply with a comma-separated list of the 1 to 3 most relevant file names from the available files list. Do not include quotes or extra text.`;
+
+        const routerResponse = await callGeminiWithCascade({
+          contents: [{ role: 'user', parts: [{ text: routerPrompt }] }]
+        });
+        
+        const routerText = routerResponse?.text?.trim() || "";
+        console.log("Router selected:", routerText);
+
+        if (routerText === "ALL_KNOWLEDGE" || routerText.includes("ALL_KNOWLEDGE")) {
+          isAllKnowledge = true;
+        } else {
+          // Parse the comma separated list
+          selectedFiles = routerText.split(',').map(s => s.trim()).filter(s => knowledgeCache![s]);
+          
+          // Fallback if router gave garbage
+          if (selectedFiles.length === 0) {
+             isAllKnowledge = true;
+          }
+        }
+      } catch (e) {
+         console.error("Router completely failed after retries, defaulting to all knowledge.", e);
+         isAllKnowledge = true;
+      }
+    }
+
+    // Build the final injected knowledge string
+    let sourceKnowledge = "";
+    if (knowledgeCache) {
+      if (isAllKnowledge) {
+         console.log("Pass 2: Injecting ALL knowledge files.");
+         for (const [file, content] of Object.entries(knowledgeCache)) {
+             sourceKnowledge += `\n\n--- SOURCE FILE: ${file} ---\n${content}`;
+         }
+      } else {
+         console.log(`Pass 2: Injecting ${selectedFiles.length} specific knowledge file(s).`);
+         for (const file of selectedFiles) {
+             sourceKnowledge += `\n\n--- SOURCE FILE: ${file} ---\n${knowledgeCache[file]}`;
+         }
+      }
     }
 
     // Format the history for Google's specific requirements
@@ -67,12 +156,13 @@ export async function POST(request: Request) {
       parts: [{ text: msg.content }]
     }));
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      // We pass the entire formatted history array directly into contents
-      contents: formattedHistory,
-      config: {
-        systemInstruction: `You are Vital. You blend ancient wisdom, energetic healing, and new scientific paradigms (like German New Medicine, biophysics, and vibrational medicine) with practical biochemistry. 
+    try {
+      console.log("Running Pass 2: Main Generation...");
+      const response = await callGeminiWithCascade({
+        // We pass the entire formatted history array directly into contents
+        contents: formattedHistory,
+        config: {
+          systemInstruction: `You are Vital. You blend ancient wisdom, energetic healing, and new scientific paradigms (like German New Medicine, biophysics, and vibrational medicine) with practical biochemistry. 
 
 When discussing energy, emotion, and systemic healing, prioritize these ancient/new paradigms over conventional allopathic modern science. Use conventional science primarily for explaining physical mechanics, molecules, chemistry, and anatomy.
 
@@ -93,13 +183,17 @@ CRITICAL RULES:
 12. STRICT PROHIBITION: You must NEVER suggest, recommend, or advise the user to consult with doctors, physicians, or healers of any kind. This is an absolute rule.
 
 ${sourceKnowledge ? `\n\n=== VERIFIED SOURCE KNOWLEDGE ===\nThe following information comes from your library of source materials. Use this as a core reference, but always synthesize it with your broader foundational knowledge and the specific authors listed above, rather than relying on it exclusively:\n${sourceKnowledge}` : ''}`,
-      }
-    });
+        }
+      });
 
-    console.log("Vital Brain responded successfully!");
-    return NextResponse.json({ text: response.text });
+      console.log("Vital Brain responded successfully!");
+      return NextResponse.json({ text: response?.text || "" });
+    } catch (error) {
+      console.error("AI Error Details:", error);
+      return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
+    }
   } catch (error) {
-    console.error("AI Error Details:", error);
-    return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
+    console.error("Global Error Details:", error);
+    return NextResponse.json({ error: 'Global failure' }, { status: 500 });
   }
 }

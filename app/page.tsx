@@ -91,7 +91,7 @@ export default function Home() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           history: newChatHistory,
           passcode: localStorage.getItem('vital-passcode')
         }),
@@ -102,13 +102,22 @@ export default function Home() {
       if (data.text) {
         setMessages(prev => [...prev, { role: 'ai', content: data.text, isNew: true }]);
       } else if (data.error) {
-        setMessages(prev => [...prev, { role: 'ai', content: `[System Error: ${data.error}]`, isNew: true }]);
+        const errorMsg = isHebrew(userText)
+          ? "נסו שוב עוד רגע, נתקענו"
+          : "Something went wrong on my end. Try again in a moment.";
+        setMessages(prev => [...prev, { role: 'ai', content: errorMsg, isNew: true }]);
       } else {
-        setMessages(prev => [...prev, { role: 'ai', content: "[System: Received an empty response from the brain.]", isNew: true }]);
+        const errorMsg = isHebrew(userText)
+          ? "נסו שוב עוד רגע, נתקענו"
+          : "Something went wrong on my end. Try again in a moment.";
+        setMessages(prev => [...prev, { role: 'ai', content: errorMsg, isNew: true }]);
       }
     } catch (error) {
       console.error("Connection error:", error);
-      setMessages(prev => [...prev, { role: 'ai', content: "[System: Front-end connection failed.]" }]);
+      const errorMsg = isHebrew(userText)
+        ? "נסו שוב עוד רגע, נתקענו"
+        : "Something went wrong on my end. Try again in a moment.";
+      setMessages(prev => [...prev, { role: 'ai', content: errorMsg }]);
     } finally {
       setIsLoading(false);
       // Reset textarea height after sending
@@ -181,9 +190,9 @@ export default function Home() {
   if (isVerified === null) {
     // Blank state while we check localStorage on first load
     return (
-      <main 
+      <main
         className="h-[100dvh] w-full relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed flex items-center justify-center"
-        style={{ backgroundImage: "url('/bg.jpg')" }}
+        style={{ backgroundImage: "url('/bg.png')" }}
       >
         <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
       </main>
@@ -192,15 +201,15 @@ export default function Home() {
 
   if (isVerified === false) {
     return (
-      <main 
+      <main
         className="h-[100dvh] w-full text-[#2C3E50] flex flex-col items-center justify-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
-        style={{ backgroundImage: "url('/bg.jpg')" }}
+        style={{ backgroundImage: "url('/bg.png')" }}
       >
         <div className={`absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0 transition-opacity duration-700 ease-in-out ${isEntering ? 'opacity-0' : 'opacity-100'}`} />
-        
+
         <div className={`relative z-10 w-full max-w-sm sm:max-w-md bg-white/60 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-lg border border-white/50 text-center transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] ${isEntering ? 'opacity-0 blur-md scale-110 -translate-y-4' : 'opacity-100 blur-0 scale-100 translate-y-0'} fade-in-slow`}>
           <h1 className="text-2xl font-medium tracking-[0.5px] text-[#5D7A94] drop-shadow-sm mb-6" dir="rtl">חיכינו לך :)</h1>
-          
+
           <form onSubmit={handleVerify} className="space-y-4">
             <div>
               <input
@@ -240,9 +249,9 @@ export default function Home() {
   }
 
   return (
-    <main 
+    <main
       className="h-[100dvh] w-full text-[#2C3E50] flex flex-col items-center p-6 sm:p-12 font-sans selection:bg-[#B3D4F0] selection:text-[#1A252F] relative overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed"
-      style={{ backgroundImage: "url('/bg.jpg')" }}
+      style={{ backgroundImage: "url('/bg.png')" }}
     >
       {/* Overlay to ensure text readability while keeping the image completely sharp */}
       <div className="absolute inset-0 bg-[#F5F9FD]/50 pointer-events-none z-0" />
@@ -370,7 +379,7 @@ export default function Home() {
                               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                             </svg>
                           </button>
-                          
+
                           <button
                             onClick={() => toggleSaveMessage(msg.content)}
                             className={`p-1.5 rounded-full hover:bg-[#E5F1FC] transition-colors cursor-pointer ${savedMessages.includes(msg.content) ? 'text-[#5D7A94]' : 'text-[#7AA1C4] hover:text-[#5D7A94]'}`}
