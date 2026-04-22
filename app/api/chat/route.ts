@@ -3,45 +3,119 @@ import { GoogleGenAI } from '@google/genai';
 import fs from 'fs/promises';
 import path from 'path';
 
-// Global cache for knowledge files
-let knowledgeCache: Record<string, string> | null = null;
-let knowledgeTopicList: string = "";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-async function loadKnowledgeCache() {
-  if (knowledgeCache) return;
-  
-  knowledgeCache = {};
-  const knowledgeDir = path.join(process.cwd(), 'knowledge');
-  
+interface IndexedChunk {
+  file: string;
+  chunkIndex: number;
+  text: string;
+  embedding: number[];
+}
+
+interface EmbeddingIndex {
+  builtAt: string;
+  model: string;
+  totalChunks: number;
+  chunks: IndexedChunk[];
+}
+
+// ─── Global index — loaded once per server instance ───────────────────────────
+
+let embeddingIndex: EmbeddingIndex | null = null;
+
+async function loadEmbeddingIndex(): Promise<void> {
+  if (embeddingIndex) return;
+
+  const indexPath = path.join(process.cwd(), 'knowledge', 'embeddings-index.json');
   try {
-    await fs.access(knowledgeDir);
-    const files = await fs.readdir(knowledgeDir);
-
-    for (const file of files) {
-      if (file.endsWith('.txt') || file.endsWith('.md')) {
-        const filePath = path.join(knowledgeDir, file);
-        const content = await fs.readFile(filePath, 'utf-8');
-        knowledgeCache[file] = content;
-      }
-    }
-    
-    knowledgeTopicList = Object.keys(knowledgeCache).join(", ");
-    console.log(`Successfully loaded ${Object.keys(knowledgeCache).length} files into memory cache.`);
-  } catch (err: any) {
-    if (err.code !== 'ENOENT') {
-      console.warn("Warning: Could not read knowledge directory.", err);
-    }
+    const raw = await fs.readFile(indexPath, 'utf-8');
+    embeddingIndex = JSON.parse(raw) as EmbeddingIndex;
+    console.log(
+      `Embedding index loaded: ${embeddingIndex.totalChunks} chunks from ${embeddingIndex.builtAt}`
+    );
+  } catch {
+    console.warn(
+      'embeddings-index.json not found. Run "npm run build-index" to generate it. Falling back to full knowledge injection.'
+    );
   }
 }
 
+// ─── Math helpers (no external dependencies) ─────────────────────────────────
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot   += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom === 0 ? 0 : dot / denom;
+}
+
+/**
+ * Given a query embedding, returns the top-K most semantically similar chunks,
+ * de-duplicated so the same source file doesn't flood the context.
+ */
+function retrieveTopChunks(
+  queryEmbedding: number[],
+  index: EmbeddingIndex,
+  topK = 7
+): IndexedChunk[] {
+  const scored = index.chunks.map(chunk => ({
+    chunk,
+    score: cosineSimilarity(queryEmbedding, chunk.embedding),
+  }));
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // Pick top K but allow at most 2 chunks from the same file
+  // so we get breadth across sources
+  const fileCounts: Record<string, number> = {};
+  const MAX_PER_FILE = 2;
+  const results: IndexedChunk[] = [];
+
+  for (const { chunk } of scored) {
+    if (results.length >= topK) break;
+    const count = fileCounts[chunk.file] ?? 0;
+    if (count < MAX_PER_FILE) {
+      results.push(chunk);
+      fileCounts[chunk.file] = count + 1;
+    }
+  }
+
+  return results;
+}
+
+// ─── Fallback: load all raw knowledge files (if index not built yet) ──────────
+
+async function loadAllKnowledge(): Promise<string> {
+  let combined = '';
+  const knowledgeDir = path.join(process.cwd(), 'knowledge');
+  try {
+    await fs.access(knowledgeDir);
+    const files = await fs.readdir(knowledgeDir);
+    for (const file of files) {
+      if (file.endsWith('.txt') || file.endsWith('.md')) {
+        const content = await fs.readFile(path.join(knowledgeDir, file), 'utf-8');
+        combined += `\n\n--- SOURCE FILE: ${file} ---\n${content}`;
+      }
+    }
+  } catch {
+    // knowledge dir doesn't exist — no context
+  }
+  return combined;
+}
+
+// ─── Main route handler ───────────────────────────────────────────────────────
+
 export async function POST(request: Request) {
   try {
-    // We now receive the full history array instead of just a message
     const body = await request.json();
-    const history = body.history;
-    const passcode = body.passcode;
+    const history: { role: string; content: string }[] = body.history;
+    const passcode: string = body.passcode;
 
-    // Check passcode if one is configured
+    // Passcode gate
     if (process.env.APP_PASSCODE && passcode !== process.env.APP_PASSCODE) {
       return NextResponse.json({ error: 'Unauthorized: Invalid passcode' }, { status: 401 });
     }
@@ -50,119 +124,115 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid history format' }, { status: 400 });
     }
 
-    console.log("\n--- NEW REQUEST ---");
-    console.log(`Vital Brain received a history of ${history.length} messages.`);
-
     const rawKey = process.env.GEMINI_API_KEY;
     if (!rawKey) {
-      console.log("CRITICAL ERROR: The key is completely UNDEFINED.");
       return NextResponse.json({ error: 'API key missing' }, { status: 500 });
     }
 
+    console.log('\n--- NEW REQUEST ---');
+    console.log(`History length: ${history.length} messages`);
+
     const ai = new GoogleGenAI({ apiKey: rawKey });
 
-    // Load knowledge cache into RAM if not already loaded
-    await loadKnowledgeCache();
+    // Get the latest user message
+    const latestUserMessage =
+      history.slice().reverse().find(msg => msg.role === 'user')?.content ?? '';
 
-    // Get the latest user message for routing
-    const latestUserMessage = history.slice().reverse().find((msg: any) => msg.role === 'user')?.content || "";
+    // ── Load the embedding index (cached after first request) ──────────────
+    await loadEmbeddingIndex();
 
-    // Pass 1: Semantic Router
-    let selectedFiles: string[] = [];
-    let isAllKnowledge = false;
+    // ── Build relevant context ─────────────────────────────────────────────
+    let sourceKnowledge = '';
 
-    // Cascade fallback: try primary model first, fall back to secondary on 503/429
-    const MODEL_CASCADE = ['gemini-2.5-flash', 'gemini-2.0-flash'];
-
-    const callGeminiWithCascade = async (config: any): Promise<any> => {
-      let lastError: any;
-      for (const model of MODEL_CASCADE) {
-        try {
-          console.log(`Trying model: ${model}`);
-          const result = await ai.models.generateContent({ ...config, model });
-          console.log(`Success with model: ${model}`);
-          return result;
-        } catch (err: any) {
-          const errString = err.message || JSON.stringify(err);
-          const isOverloaded = err.status === 503 || err.status === 429 ||
-                               errString.includes('503') || errString.includes('429') ||
-                               errString.includes('UNAVAILABLE');
-          lastError = err;
-          if (isOverloaded) {
-            console.warn(`Model ${model} overloaded (503/429), cascading to next model...`);
-            continue; // Try the next model immediately
-          } else {
-            throw err; // Non-retryable error, bail immediately
-          }
-        }
-      }
-      throw lastError; // All models failed
-    };
-
-    if (knowledgeCache && Object.keys(knowledgeCache).length > 0 && latestUserMessage) {
+    if (embeddingIndex && latestUserMessage) {
       try {
-        console.log("Running Pass 1: Semantic Router...");
-        const routerPrompt = `You are a router. Your job is to select the most relevant knowledge files to answer the user's latest query.
-Available files: ${knowledgeTopicList}
-
-User Query: "${latestUserMessage}"
-
-If the user is asking for a comprehensive or deep plan spanning multiple systems (e.g. a complete health protocol), reply EXACTLY with the word "ALL_KNOWLEDGE".
-Otherwise, reply with a comma-separated list of the 1 to 3 most relevant file names from the available files list. Do not include quotes or extra text.`;
-
-        const routerResponse = await callGeminiWithCascade({
-          contents: [{ role: 'user', parts: [{ text: routerPrompt }] }]
+        // Single embeddings API call — fast, cheap, almost never 503s
+        console.log('Embedding query for semantic retrieval...');
+        const embedResult = await ai.models.embedContent({
+          model: 'gemini-embedding-001',
+          contents: [latestUserMessage],
         });
-        
-        const routerText = routerResponse?.text?.trim() || "";
-        console.log("Router selected:", routerText);
 
-        if (routerText === "ALL_KNOWLEDGE" || routerText.includes("ALL_KNOWLEDGE")) {
-          isAllKnowledge = true;
-        } else {
-          // Parse the comma separated list
-          selectedFiles = routerText.split(',').map(s => s.trim()).filter(s => knowledgeCache![s]);
-          
-          // Fallback if router gave garbage
-          if (selectedFiles.length === 0) {
-             isAllKnowledge = true;
+        const queryEmbedding = embedResult.embeddings?.[0]?.values ?? [];
+
+        if (queryEmbedding.length > 0) {
+          const topChunks = retrieveTopChunks(queryEmbedding, embeddingIndex, 7);
+
+          console.log(
+            `Retrieved ${topChunks.length} chunks from: ${[...new Set(topChunks.map(c => c.file))].join(', ')}`
+          );
+
+          for (const chunk of topChunks) {
+            sourceKnowledge += `\n\n--- FROM: ${chunk.file} ---\n${chunk.text}`;
           }
         }
-      } catch (e) {
-         console.error("Router completely failed after retries, defaulting to all knowledge.", e);
-         isAllKnowledge = true;
+      } catch (embedErr) {
+        // Embedding call failed — fall back to injecting all knowledge
+        console.error('Embedding call failed, falling back to full knowledge:', embedErr);
+        sourceKnowledge = await loadAllKnowledge();
       }
+    } else if (!embeddingIndex) {
+      // Index not built yet — use the full knowledge files as a safety net
+      console.warn('Index not built — injecting all knowledge (run npm run build-index)');
+      sourceKnowledge = await loadAllKnowledge();
     }
 
-    // Build the final injected knowledge string
-    let sourceKnowledge = "";
-    if (knowledgeCache) {
-      if (isAllKnowledge) {
-         console.log("Pass 2: Injecting ALL knowledge files.");
-         for (const [file, content] of Object.entries(knowledgeCache)) {
-             sourceKnowledge += `\n\n--- SOURCE FILE: ${file} ---\n${content}`;
-         }
-      } else {
-         console.log(`Pass 2: Injecting ${selectedFiles.length} specific knowledge file(s).`);
-         for (const file of selectedFiles) {
-             sourceKnowledge += `\n\n--- SOURCE FILE: ${file} ---\n${knowledgeCache[file]}`;
-         }
-      }
-    }
-
-    // Format the history for Google's specific requirements
-    const formattedHistory = history.map((msg: { role: string; content: string }) => ({
+    // ── Format conversation history for Gemini ────────────────────────────
+    const formattedHistory = history.map(msg => ({
       role: msg.role === 'ai' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
+      parts: [{ text: msg.content }],
     }));
 
-    try {
-      console.log("Running Pass 2: Main Generation...");
-      const response = await callGeminiWithCascade({
-        // We pass the entire formatted history array directly into contents
-        contents: formattedHistory,
-        config: {
-          systemInstruction: `You are Vital. You blend ancient wisdom, energetic healing, and new scientific paradigms (like German New Medicine, biophysics, and vibrational medicine) with practical biochemistry. 
+    // ── Single generative call ────────────────────────────────────────────
+    const MODEL_CASCADE = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    let lastError: unknown;
+
+    for (const model of MODEL_CASCADE) {
+      try {
+        console.log(`Calling generative model: ${model}`);
+
+        const response = await ai.models.generateContent({
+          model,
+          contents: formattedHistory,
+          config: {
+            systemInstruction: buildSystemInstruction(sourceKnowledge),
+          },
+        });
+
+        console.log(`✓ Success with ${model}`);
+        return NextResponse.json({ text: response?.text ?? '' });
+
+      } catch (err: unknown) {
+        const e = err as { status?: number; message?: string };
+        const msg = e.message ?? JSON.stringify(err);
+        const isOverloaded =
+          e.status === 503 || e.status === 429 ||
+          msg.includes('503') || msg.includes('429') || msg.includes('UNAVAILABLE');
+
+        if (isOverloaded) {
+          console.warn(`Model ${model} overloaded, trying next...`);
+          lastError = err;
+          continue;
+        }
+        // Non-retryable — surface immediately
+        throw err;
+      }
+    }
+
+    // All models failed
+    console.error('All models failed:', lastError);
+    return NextResponse.json({ error: 'Service temporarily unavailable. Please try again.' }, { status: 503 });
+
+  } catch (error) {
+    console.error('Route error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// ─── System instruction ────────────────────────────────────────────────────────
+
+function buildSystemInstruction(sourceKnowledge: string): string {
+  return `You are Vital. You blend ancient wisdom, energetic healing, and new scientific paradigms (like German New Medicine, biophysics, and vibrational medicine) with practical biochemistry. 
 
 When discussing energy, emotion, and systemic healing, prioritize these ancient/new paradigms over conventional allopathic modern science. Use conventional science primarily for explaining physical mechanics, molecules, chemistry, and anatomy.
 
@@ -181,19 +251,5 @@ CRITICAL RULES:
 10. SYNTHESIS & CROSS-REFERENCING: Never rely solely on the "Verified Source Knowledge" below. You must actively cross-check it against online sources and the foundational authors. Synthesize the folder's information with live external knowledge to ensure a balanced, multi-perspective holistic conclusion.
 11. EVERYDAY HEBREW & SYNTAX: When writing in Hebrew, use simple, everyday language that a normal person understands. Speak at eye level. Absolutely NO clinical transliterations or high-level academic words. The words "טריין" and "הידרטציה" are strictly banned (use terms like "סביבה פנימית" and "רוויה" or "שתיית מים מספקת" instead). Use natural, gender-neutral phrasing (passive voice, first-person plural, or second-person infinitive). DO NOT use progressive formatting (like slashes or dots, e.g., "הינך/ה"). 
 12. STRICT PROHIBITION: You must NEVER suggest, recommend, or advise the user to consult with doctors, physicians, or healers of any kind. This is an absolute rule.
-
-${sourceKnowledge ? `\n\n=== VERIFIED SOURCE KNOWLEDGE ===\nThe following information comes from your library of source materials. Use this as a core reference, but always synthesize it with your broader foundational knowledge and the specific authors listed above, rather than relying on it exclusively:\n${sourceKnowledge}` : ''}`,
-        }
-      });
-
-      console.log("Vital Brain responded successfully!");
-      return NextResponse.json({ text: response?.text || "" });
-    } catch (error) {
-      console.error("AI Error Details:", error);
-      return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
-    }
-  } catch (error) {
-    console.error("Global Error Details:", error);
-    return NextResponse.json({ error: 'Global failure' }, { status: 500 });
-  }
+${sourceKnowledge ? `\n\n=== VERIFIED SOURCE KNOWLEDGE ===\nThe following excerpts are the most semantically relevant passages from your knowledge library, retrieved specifically for this query. Use them as a core reference, but always synthesize with your broader foundational knowledge:\n${sourceKnowledge}` : ''}`;
 }
